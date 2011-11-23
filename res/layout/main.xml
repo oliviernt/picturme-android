@@ -7,8 +7,9 @@
     <TextView
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="10px"
-        android:text="@string/hello" />
+        android:layout_margin="20px"
+        android:text="@string/hello"
+        android:textSize="30px" />
 
     <LinearLayout
         android:id="@+id/linearLayout1"
@@ -37,7 +38,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
         android:text="@string/upload_picture" />
-    
+
     <ImageView android:id="@+id/preview_image"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"

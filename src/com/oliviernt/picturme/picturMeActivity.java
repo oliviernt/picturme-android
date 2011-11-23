@@ -1,8 +1,10 @@
 package com.oliviernt.picturme;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import org.apache.http.HttpRequest;
@@ -16,13 +18,14 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.HttpParams;
+import org.json.JSONArray;
+import org.json.JSONTokener;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.ColorFilter;
 import android.graphics.Bitmap.CompressFormat;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -34,8 +37,6 @@ import android.widget.ImageView;
 import android.widget.Toast;
 import android.provider.MediaStore;
 import lib.Base64;
-import lib.Config;
-import lib.Upload;
 
 public class picturMeActivity extends Activity implements OnClickListener {
 
@@ -45,9 +46,9 @@ public class picturMeActivity extends Activity implements OnClickListener {
 	private Intent intent;
 	private ImageView preview_image;
 	private Bitmap bmp = null;
-	private Bundle bundle;
-
-	private Upload uploader;
+	private String message;
+	
+	private JSONArray finalResult;
 
 	ArrayList<NameValuePair> nameValuePairs;
 
@@ -62,6 +63,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 	};
 
 	String TAG = "PICTURLOG";
+	private ProgressDialog dialog;
 
 	/** Called when the activity is first created. */
 	@Override
@@ -69,12 +71,13 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.main);
-
+		
 		select = (Button) this.findViewById(R.id.select_picture_btn);
 		select.setOnClickListener(this);
 
 		take = (Button) this.findViewById(R.id.take_picture_btn);
 		take.setOnClickListener(this);
+		take.setClickable(false);//disable take button as it doesn't work right now
 
 		process = (Button) this.findViewById(R.id.process_data_btn);
 		process.setOnClickListener(this);
@@ -100,12 +103,14 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		}
 
 		if (v == process) {
-			if (bmp != null) {
-				scaleBmp();
-				preview_image.setVisibility(View.GONE);
-				process.setVisibility(View.GONE);
-				take.setVisibility(View.GONE);
-				select.setVisibility(View.GONE);
+			preview_image.setVisibility(View.GONE);
+			process.setVisibility(View.GONE);
+			take.setVisibility(View.GONE);
+			select.setVisibility(View.GONE);
+
+			dialog = ProgressDialog.show(this, "", "Loading...", true);
+			
+			if (bmp != null && scaleBmp()) {
 				// upload the image to the server
 				Log.d(TAG, "Uploading the image");
 
@@ -119,6 +124,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 
 				nameValuePairs.add(new BasicNameValuePair("file", encoded));
 				Thread t = new Thread() {
+
 					public void run() {
 						try {
 							Log.d(TAG, "Uploading...");
@@ -129,10 +135,23 @@ public class picturMeActivity extends Activity implements OnClickListener {
 									nameValuePairs));
 							HttpResponse response = httpclient
 									.execute(httppost);
-							Log.d(TAG, response.toString());
+							BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "UTF-8"));
+							StringBuilder builder = new StringBuilder();
+							for (String line = null; (line = reader.readLine()) != null;) {
+							    builder.append(line).append("\n");
+							    Log.d("LINE", line);
+							}
+							JSONTokener tokener = new JSONTokener(builder.toString());
+							Log.d("JSON", tokener.toString());
+							finalResult = new JSONArray(tokener);
+							
+							Log.d("JSON", finalResult.toString());
+
+							message = "Image uploaded successfuly!";
 
 						} catch (Exception e) {
 							e.printStackTrace();
+							message = "An error occured! Please try again.";
 						}
 						handler.post(runner);
 					}
@@ -156,6 +175,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 				bmp = MediaStore.Images.Media.getBitmap(
 						this.getContentResolver(), uri);
 				preview_image.setImageBitmap(bmp);
+				process.setVisibility(View.VISIBLE);
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 				Log.e(TAG, e.getMessage());
@@ -163,7 +183,6 @@ public class picturMeActivity extends Activity implements OnClickListener {
 				e.printStackTrace();
 				Log.e(TAG, e.getMessage());
 			}
-			process.setVisibility(View.VISIBLE);
 		}
 		// if an image was made with the camera, get the bitmap data
 		if (requestCode == CODE_TAKE && resultCode == Activity.RESULT_OK) {
@@ -173,7 +192,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		}
 	}
 
-	public void scaleBmp() {
+	public boolean scaleBmp() {
 
 		float bmpWidth = bmp.getWidth();
 		float bmpHeight = bmp.getHeight();
@@ -189,10 +208,19 @@ public class picturMeActivity extends Activity implements OnClickListener {
 			width = (int) bmpWidth;
 		}
 
-		bmp = Bitmap.createScaledBitmap(bmp, (width), (height), true);
+		if (height > 0 && width > 0) {
+			bmp = Bitmap.createScaledBitmap(bmp, (width), (height), true);
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 	public void handleData() {
 		Log.d(TAG, "Uploaded!");
+		take.setVisibility(View.VISIBLE);
+		select.setVisibility(View.VISIBLE);
+		Toast.makeText(this, message, Toast.LENGTH_LONG);
+		dialog.dismiss();
 	}
 }
