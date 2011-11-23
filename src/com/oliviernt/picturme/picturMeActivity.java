@@ -4,7 +4,10 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 
 import org.apache.http.HttpRequest;
@@ -19,6 +22,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.HttpParams;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import android.app.Activity;
@@ -26,6 +30,8 @@ import android.app.ProgressDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -47,8 +53,8 @@ public class picturMeActivity extends Activity implements OnClickListener {
 	private ImageView preview_image;
 	private Bitmap bmp = null;
 	private String message;
-	
-	private JSONArray finalResult;
+
+	private JSONObject finalResult;
 
 	ArrayList<NameValuePair> nameValuePairs;
 
@@ -71,13 +77,14 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		super.onCreate(savedInstanceState);
 
 		setContentView(R.layout.main);
-		
+
 		select = (Button) this.findViewById(R.id.select_picture_btn);
 		select.setOnClickListener(this);
 
 		take = (Button) this.findViewById(R.id.take_picture_btn);
 		take.setOnClickListener(this);
-		take.setClickable(false);//disable take button as it doesn't work right now
+		take.setClickable(false);// disable take button as it doesn't work right
+									// now
 
 		process = (Button) this.findViewById(R.id.process_data_btn);
 		process.setOnClickListener(this);
@@ -108,25 +115,25 @@ public class picturMeActivity extends Activity implements OnClickListener {
 			take.setVisibility(View.GONE);
 			select.setVisibility(View.GONE);
 
-			dialog = ProgressDialog.show(this, "", "Loading...", true);
-			
-			if (bmp != null && scaleBmp()) {
+			if (bmp != null) {
+				dialog = ProgressDialog.show(this, "", "Loading...", true);
 				// upload the image to the server
 				Log.d(TAG, "Uploading the image");
-
-				ByteArrayOutputStream bos = new ByteArrayOutputStream();
-				bmp.compress(CompressFormat.PNG, 0 /* ignored for PNG */, bos);
-				byte[] bitmapdata = bos.toByteArray();
-
-				String encoded = Base64.encodeBytes(bitmapdata);
-
-				nameValuePairs = new ArrayList<NameValuePair>();
-
-				nameValuePairs.add(new BasicNameValuePair("file", encoded));
 				Thread t = new Thread() {
 
 					public void run() {
 						try {
+							scaleBmp();
+							ByteArrayOutputStream bos = new ByteArrayOutputStream();
+							bmp.compress(CompressFormat.PNG, 0, bos);
+							byte[] bitmapdata = bos.toByteArray();
+
+							String encoded = Base64.encodeBytes(bitmapdata);
+
+							nameValuePairs = new ArrayList<NameValuePair>();
+
+							nameValuePairs.add(new BasicNameValuePair("file",
+									encoded));
 							Log.d(TAG, "Uploading...");
 							String url = "http://www.pictur.me/upload.ajax";
 							HttpClient httpclient = new DefaultHttpClient();
@@ -135,19 +142,16 @@ public class picturMeActivity extends Activity implements OnClickListener {
 									nameValuePairs));
 							HttpResponse response = httpclient
 									.execute(httppost);
-							BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "UTF-8"));
+							BufferedReader reader = new BufferedReader(
+									new InputStreamReader(response.getEntity()
+											.getContent(), "UTF-8"));
 							StringBuilder builder = new StringBuilder();
 							for (String line = null; (line = reader.readLine()) != null;) {
-							    builder.append(line).append("\n");
-							    Log.d("LINE", line);
+								builder.append(line).append("\n");
+								Log.d("LINE", line);
 							}
-							JSONTokener tokener = new JSONTokener(builder.toString());
-							Log.d("JSON", tokener.toString());
-							finalResult = new JSONArray(tokener);
-							
-							Log.d("JSON", finalResult.toString());
-
-							message = "Image uploaded successfuly!";
+							Log.d("JSON", builder.toString());
+							finalResult = new JSONObject(builder.toString());
 
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -175,6 +179,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 				bmp = MediaStore.Images.Media.getBitmap(
 						this.getContentResolver(), uri);
 				preview_image.setImageBitmap(bmp);
+				preview_image.setVisibility(View.VISIBLE);
 				process.setVisibility(View.VISIBLE);
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
@@ -188,6 +193,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		if (requestCode == CODE_TAKE && resultCode == Activity.RESULT_OK) {
 			bmp = (Bitmap) data.getExtras().get("data");
 			preview_image.setImageBitmap(bmp);
+			preview_image.setVisibility(View.VISIBLE);
 			process.setVisibility(View.VISIBLE);
 		}
 	}
@@ -220,7 +226,38 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		Log.d(TAG, "Uploaded!");
 		take.setVisibility(View.VISIBLE);
 		select.setVisibility(View.VISIBLE);
-		Toast.makeText(this, message, Toast.LENGTH_LONG);
 		dialog.dismiss();
+
+		message = "An error occured! Please try again.";
+		boolean success = false;
+		String url = "http://pictur.me";
+
+		try {
+			success = finalResult.getBoolean("success");
+			url += finalResult.getString("url_path");
+		} catch (Exception e) {
+		}
+		if (success) {
+			message = "Picture was uploaded successfuly!";
+		}
+		dialog.dismiss();
+		Toast.makeText(this, message, Toast.LENGTH_LONG);
+		preview_image.setImageBitmap(getBitmapFromURL(url));
+	}
+
+	public static Bitmap getBitmapFromURL(String src) {
+		try {
+			URL url = new URL(src);
+			HttpURLConnection connection = (HttpURLConnection) url
+					.openConnection();
+			connection.setDoInput(true);
+			connection.connect();
+			InputStream input = connection.getInputStream();
+			Bitmap myBitmap = BitmapFactory.decodeStream(input);
+			return myBitmap;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
 	}
 }
