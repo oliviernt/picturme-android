@@ -83,8 +83,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 
 		take = (Button) this.findViewById(R.id.take_picture_btn);
 		take.setOnClickListener(this);
-		take.setClickable(false);// disable take button as it doesn't work right
-									// now
+		// take.setClickable(false);// disable take button as it doesn't work
 
 		process = (Button) this.findViewById(R.id.process_data_btn);
 		process.setOnClickListener(this);
@@ -192,6 +191,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		// if an image was made with the camera, get the bitmap data
 		if (requestCode == CODE_TAKE && resultCode == Activity.RESULT_OK) {
 			bmp = (Bitmap) data.getExtras().get("data");
+			scaleBmp();
 			preview_image.setImageBitmap(bmp);
 			preview_image.setVisibility(View.VISIBLE);
 			process.setVisibility(View.VISIBLE);
@@ -216,6 +216,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 
 		if (height > 0 && width > 0) {
 			bmp = Bitmap.createScaledBitmap(bmp, (width), (height), true);
+			preview_image.setImageBitmap(bmp);
 			return true;
 		} else {
 			return false;
