@@ -2,13 +2,25 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:background="@color/grey"
     android:orientation="vertical" >
+
+    <TextView
+        android:id="@+id/textView1"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20px"
+        android:text="@string/app_name"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textColor="@color/black"
+        android:textSize="50px" />
 
     <TextView
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_margin="20px"
         android:text="@string/hello"
+        android:textColor="@color/black"
         android:textSize="30px" />
 
     <LinearLayout
@@ -20,26 +32,34 @@
 
         <Button
             android:id="@+id/take_picture_btn"
-            android:layout_width="wrap_content"
+            android:layout_width="200px"
             android:layout_height="wrap_content"
             android:text="@string/take_picture_btn" />
 
         <Button
             android:id="@+id/select_picture_btn"
-            android:layout_width="wrap_content"
+            android:layout_width="200px"
             android:layout_height="wrap_content"
             android:text="@string/select_picture_btn" />
 
+	    <Button
+	        android:id="@+id/process_data_btn"
+	        android:layout_width="200px"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="center_horizontal"
+	        android:text="@string/upload_picture" />
+
+	    <Button
+	        android:id="@+id/select_other_btn"
+	        android:layout_width="200px"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="center_horizontal"
+	        android:text="@string/select_new_picture" />
+    
     </LinearLayout>
 
-    <Button
-        android:id="@+id/process_data_btn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:text="@string/upload_picture" />
-
-    <ImageView android:id="@+id/preview_image"
+    <ImageView
+        android:id="@+id/preview_image"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:layout_gravity="bottom" />

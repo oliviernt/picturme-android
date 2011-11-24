@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="hello">upload a picture and get an awesome mosaic from 500px!</string>
-    <string name="app_name">Pictur.me</string>
+    <string name="hello">upload a picture and get an awesome mosaic from 500px.com images!</string>
+    <string name="app_name">pictur.me</string>
     <string name="select_picture_btn">select picture</string>
     <string name="take_picture_btn">take picture</string>
     <string name="process_data">process data</string>
-    <string name="upload_picture">upload picture</string>
+    <string name="upload_picture">upload to pictur.me</string>
+    <string name="select_new_picture">select new picture</string>
 
 </resources>

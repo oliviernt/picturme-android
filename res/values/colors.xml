@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<color name="white">#FFFFFF</color>
+	<color name="black">#000000</color>
+	<color name="orange_red">#FF2400</color>
+	<color name="dark_orchid">#7D1B7E</color>
+	<color name="siena1">#F87431</color>
+	<color name="blue">#00aba4</color>
+	<color name="teal_blue">#0099CC</color>
+	<color name="dark_slate_blue">#2B3856</color>
+	<color name="brown">#532409</color>
+	<color name="red">#EB4415</color>
+	<color name="purple">#932683</color>
+	<color name="yellow">#ffd500</color>
+	<color name="grey">#f5f5f5</color>
+</resources>
