@@ -28,12 +28,19 @@ public class picturMeActivity extends Activity implements OnClickListener {
 	private Button select;
 	private Button take;
 	private Button process;
+	private Button select_new;
+
 	private Intent intent;
 	private ImageView preview_image;
 	private Bitmap bmp = null;
-	private String message;
 	private JSONObject finalResult;
 	private ProgressDialog dialog;
+	private OnClickListener context;
+	private String message;
+	private String url;
+	private String thumbnail;
+
+	protected final Handler handler = new Handler();
 	protected Runnable runner = new Runnable() {
 		@Override
 		public void run() {
@@ -41,13 +48,9 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		}
 	};
 
-	private final String TAG = "PICTURLOG";
-
+	private static final String TAG = "PICTURLOG";
 	private static final int CODE_SELECT = 1;
 	private static final int CODE_TAKE = 2;
-
-	protected final Handler handler = new Handler();
-	private Button select_new;
 
 	/** Called when the activity is first created. */
 	@Override
@@ -56,15 +59,17 @@ public class picturMeActivity extends Activity implements OnClickListener {
 
 		setContentView(R.layout.main);
 
+		context = this;
+
 		if (!Config.hasNetworkConnection(this)) {
 			message = "No upload possible without a network connection!";
 			Config.toast(this, message);
 		}
 
 		/* Get view elements */
-		select = (Button) this.findViewById(R.id.select_picture_btn);
 		take = (Button) this.findViewById(R.id.take_picture_btn);
 		process = (Button) this.findViewById(R.id.process_data_btn);
+		select = (Button) this.findViewById(R.id.select_picture_btn);
 		select_new = (Button) this.findViewById(R.id.select_other_btn);
 		preview_image = (ImageView) this.findViewById(R.id.preview_image);
 
@@ -73,8 +78,8 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		select_new.setVisibility(View.GONE);
 
 		/* Bind listener to buttons */
-		select.setOnClickListener(this);
 		take.setOnClickListener(this);
+		select.setOnClickListener(this);
 		process.setOnClickListener(this);
 		select_new.setOnClickListener(this);
 	}
@@ -94,7 +99,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 			intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 			startActivityForResult(intent, CODE_TAKE);
 		}
-		
+
 		if (v == select_new) {
 			select_new.setVisibility(View.GONE);
 			process.setVisibility(View.GONE);
@@ -132,9 +137,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 							StringBuilder builder = new StringBuilder();
 							for (String line = null; (line = reader.readLine()) != null;) {
 								builder.append(line).append("\n");
-								Log.d("LINE", line);
 							}
-							Log.d("JSON", builder.toString());
 							finalResult = new JSONObject(builder.toString());
 
 						} catch (Exception e) {
@@ -146,6 +149,12 @@ public class picturMeActivity extends Activity implements OnClickListener {
 				};
 				t.run();
 			}
+		}
+
+		if (v == preview_image) {
+			Intent browserIntent = new Intent(Intent.ACTION_VIEW,
+					Uri.parse(url));
+			startActivity(browserIntent);
 		}
 	}
 
@@ -162,7 +171,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 			try {
 				bmp = MediaStore.Images.Media.getBitmap(
 						this.getContentResolver(), uri);
-				
+
 				preview_image.setImageBitmap(bmp);
 
 				take.setVisibility(View.GONE);
@@ -182,9 +191,9 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		if (requestCode == CODE_TAKE && resultCode == Activity.RESULT_OK) {
 			bmp = (Bitmap) data.getExtras().get("data");
 			bmp = Config.scaleBmp(bmp);
-			
+
 			preview_image.setImageBitmap(bmp);
-			
+
 			take.setVisibility(View.GONE);
 			select.setVisibility(View.GONE);
 			select_new.setVisibility(View.VISIBLE);
@@ -197,18 +206,19 @@ public class picturMeActivity extends Activity implements OnClickListener {
 	 * handle the data once the upload is finished
 	 */
 	public void handleData() {
-		Log.d(TAG, "Uploaded!");
 		take.setVisibility(View.VISIBLE);
 		select.setVisibility(View.VISIBLE);
-		dialog.dismiss();
+
+		process.setVisibility(View.GONE);
+		select_new.setVisibility(View.GONE);
 
 		message = "An error occured! Please try again.";
 		boolean success = false;
-		String url = "http://pictur.me";
-
 		try {
 			success = finalResult.getBoolean("success");
-			url += finalResult.getString("url_path");
+			url = "http://pictur.me";
+			url += finalResult.getString("path");
+			thumbnail = finalResult.getString("thumbnail");
 		} catch (Exception e) {
 			e.printStackTrace();
 			Log.e(TAG, e.getMessage());
@@ -218,6 +228,16 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		}
 		dialog.dismiss();
 		Config.toast(this, message);
-		preview_image.setImageBitmap(Config.getBitmapFromURL(url));
+
+		Thread t = new Thread() {
+			@Override
+			public void run() {
+				bmp = Config.getBitmapFromURL(thumbnail);
+				preview_image.setImageBitmap(bmp);
+				preview_image.setVisibility(View.VISIBLE);
+				preview_image.setOnClickListener(context);
+			}
+		};
+		t.run();
 	}
 }

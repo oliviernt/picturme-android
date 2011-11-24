@@ -43,18 +43,18 @@
             android:text="@string/select_picture_btn" />
 
 	    <Button
-	        android:id="@+id/process_data_btn"
-	        android:layout_width="200px"
-	        android:layout_height="wrap_content"
-	        android:layout_gravity="center_horizontal"
-	        android:text="@string/upload_picture" />
-
-	    <Button
 	        android:id="@+id/select_other_btn"
 	        android:layout_width="200px"
 	        android:layout_height="wrap_content"
 	        android:layout_gravity="center_horizontal"
 	        android:text="@string/select_new_picture" />
+
+	    <Button
+	        android:id="@+id/process_data_btn"
+	        android:layout_width="200px"
+	        android:layout_height="wrap_content"
+	        android:layout_gravity="center_horizontal"
+	        android:text="@string/upload_picture" />
     
     </LinearLayout>
 
