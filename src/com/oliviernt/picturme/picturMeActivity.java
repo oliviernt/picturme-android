@@ -22,6 +22,8 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.provider.MediaStore;
 import lib.Config;
+import lib.HttpHelper;
+import lib.BitmapHelper;
 
 public class picturMeActivity extends Activity implements OnClickListener {
 
@@ -41,12 +43,6 @@ public class picturMeActivity extends Activity implements OnClickListener {
 	private String thumbnail;
 
 	protected final Handler handler = new Handler();
-	protected Runnable runner = new Runnable() {
-		@Override
-		public void run() {
-			handleData();
-		}
-	};
 
 	private static final String TAG = "PICTURLOG";
 	private static final int CODE_SELECT = 1;
@@ -61,7 +57,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 
 		context = this;
 
-		if (!Config.hasNetworkConnection(this)) {
+		if (!HttpHelper.hasNetworkConnection(this)) {
 			message = "No upload possible without a network connection!";
 			Config.toast(this, message);
 		}
@@ -110,26 +106,27 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		if (v == process) {
 			preview_image.setVisibility(View.GONE);
 			process.setVisibility(View.GONE);
-
-			if (!Config.hasNetworkConnection(this)) {
+			select_new.setVisibility(View.GONE);
+			if (!HttpHelper.hasNetworkConnection(this)) {
 				message = "No upload possible without a network connection!";
 				Config.toast(this, message);
+				take.setVisibility(View.VISIBLE);
+				select.setVisibility(View.VISIBLE);
 				return;
 			}
-
 			take.setVisibility(View.GONE);
 			select.setVisibility(View.GONE);
 
 			if (bmp != null) {
-				dialog = ProgressDialog.show(this, "", "Loading...", true);
+				dialog = ProgressDialog.show(this, "", "Uploading image...", true);
 				// upload the image to the server
 				Log.d(TAG, "Uploading the image");
 				Thread t = new Thread() {
+					@Override
 					public void run() {
+						bmp = BitmapHelper.scaleBmp(bmp, 500);
 						try {
-							bmp = Config.scaleBmp(bmp, 500);
-
-							HttpResponse response = Config.uploadBitmap(bmp);
+							HttpResponse response = HttpHelper.uploadBitmap(bmp);
 
 							BufferedReader reader = new BufferedReader(
 									new InputStreamReader(response.getEntity()
@@ -144,10 +141,15 @@ public class picturMeActivity extends Activity implements OnClickListener {
 							e.printStackTrace();
 							message = "An error occured! Please try again.";
 						}
-						handler.post(runner);
+						handler.post(new Runnable() {
+							@Override
+							public void run() {
+								handleData();
+							}
+						});
 					}
 				};
-				t.run();
+				t.start();
 			}
 		}
 
@@ -167,7 +169,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		}
 		// if an image was selected get data from uri
 		if (requestCode == CODE_SELECT) {
-			Uri uri = (Uri) data.getData();
+			Uri uri = data.getData();
 			try {
 				bmp = MediaStore.Images.Media.getBitmap(
 						this.getContentResolver(), uri);
@@ -190,7 +192,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		// if an image was made with the camera, get the bitmap data
 		if (requestCode == CODE_TAKE && resultCode == Activity.RESULT_OK) {
 			bmp = (Bitmap) data.getExtras().get("data");
-			bmp = Config.scaleBmp(bmp);
+			bmp = BitmapHelper.scaleBmp(bmp);
 
 			preview_image.setImageBitmap(bmp);
 
@@ -232,12 +234,17 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		Thread t = new Thread() {
 			@Override
 			public void run() {
-				bmp = Config.getBitmapFromURL(thumbnail);
-				preview_image.setImageBitmap(bmp);
-				preview_image.setVisibility(View.VISIBLE);
-				preview_image.setOnClickListener(context);
+				final Bitmap b = HttpHelper.getBitmapFromURL(thumbnail);
+				preview_image.post(new Runnable() {
+					@Override
+					public void run() {
+						preview_image.setImageBitmap(b);
+						preview_image.setVisibility(View.VISIBLE);
+						preview_image.setOnClickListener(context);
+					}
+				});
 			}
 		};
-		t.run();
+		t.start();
 	}
 }

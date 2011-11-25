@@ -6,7 +6,7 @@
     <string name="select_picture_btn">select picture</string>
     <string name="take_picture_btn">take picture</string>
     <string name="process_data">process data</string>
-    <string name="upload_picture">upload to pictur.me</string>
-    <string name="select_new_picture">select new picture</string>
+    <string name="upload_picture">beam me up, scotty</string>
+    <string name="select_new_picture">naah, don\'t do nothing</string>
 
 </resources>
