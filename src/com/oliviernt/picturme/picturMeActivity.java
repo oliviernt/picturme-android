@@ -11,8 +11,11 @@ import org.json.JSONObject;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.media.ExifInterface;
 import android.net.Uri;
+import android.graphics.Matrix;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
@@ -43,6 +46,7 @@ public class picturMeActivity extends Activity implements OnClickListener {
 	private String thumbnail;
 
 	protected final Handler handler = new Handler();
+	private ExifInterface exif;
 
 	private static final String TAG = "PICTURLOG";
 	private static final int CODE_SELECT = 1;
@@ -118,7 +122,8 @@ public class picturMeActivity extends Activity implements OnClickListener {
 			select.setVisibility(View.GONE);
 
 			if (bmp != null) {
-				dialog = ProgressDialog.show(this, "", "Uploading image...", true);
+				dialog = ProgressDialog.show(this, "", "Uploading image...",
+						true);
 				// upload the image to the server
 				Log.d(TAG, "Uploading the image");
 				Thread t = new Thread() {
@@ -126,7 +131,8 @@ public class picturMeActivity extends Activity implements OnClickListener {
 					public void run() {
 						bmp = BitmapHelper.scaleBmp(bmp, 500);
 						try {
-							HttpResponse response = HttpHelper.uploadBitmap(bmp);
+							HttpResponse response = HttpHelper
+									.uploadBitmap(bmp);
 
 							BufferedReader reader = new BufferedReader(
 									new InputStreamReader(response.getEntity()
@@ -160,6 +166,16 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		}
 	}
 
+	private String getRealPathFromURI(Uri contentUri) {
+		String[] proj = { MediaStore.Images.Media.DATA };
+		Cursor cursor = this.managedQuery(contentUri, proj, null,
+				null, null);
+		int column_index = cursor
+				.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+		cursor.moveToFirst();
+		return cursor.getString(column_index);
+	}
+
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
@@ -171,8 +187,19 @@ public class picturMeActivity extends Activity implements OnClickListener {
 		if (requestCode == CODE_SELECT) {
 			Uri uri = data.getData();
 			try {
+				exif = new ExifInterface(getRealPathFromURI(uri));
 				bmp = MediaStore.Images.Media.getBitmap(
 						this.getContentResolver(), uri);
+
+				int rotate = exif.getAttributeInt(
+						ExifInterface.TAG_ORIENTATION,
+						ExifInterface.ORIENTATION_NORMAL) * 90 - 90;
+
+				Matrix mtx = new Matrix();
+				mtx.postRotate(rotate);
+				Log.d("ROTATE", "" + rotate);
+				bmp = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(),
+						bmp.getHeight(), mtx, true);
 
 				preview_image.setImageBitmap(bmp);
 
